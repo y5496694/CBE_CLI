@@ -10,6 +10,8 @@ node $cbeEntry notes list --box sent --page 2 --limit 20 --json
 node $cbeEntry notes list --search '검색어' --search-type title --json
 node $cbeEntry notes read NOTE_ID --type R --json
 node $cbeEntry notes read NOTE_ID --type S --reserved --json
+node $cbeEntry notes send --to USER_ID --title '제목' --text '사용자가 요청한 본문' --json
+node $cbeEntry notes send --to USER_ID1,USER_ID2 --text '사용자가 요청한 본문' --dry-run --json
 ```
 
 - `--box`: `all`, `received`, `sent`, `unread`, `important`, `self`, `reserved`。
@@ -47,13 +49,22 @@ node $cbeEntry memos list --json
 
 ```powershell
 node $cbeEntry chats send --to USER_ID --text '사용자가 요청한 본문' --json
+node $cbeEntry chats create --to USER_ID1,USER_ID2 --title '업무 협의' --text '첫 메시지' --json
+node $cbeEntry chats create --to USER_ID1,USER_ID2 --text '첫 메시지' --dry-run --json
+node $cbeEntry notes send --to USER_ID --title '제목' --text '사용자가 요청한 본문' --json
 ```
 
-기존 1:1 방만 지원한다. CLI는 방 조회 결과의 참여자 두 명이 현재 계정과 지정한 수신자인지 확인한 뒤 앱의 `realtimeConect_view.sendMessageChat`를 한 번 호출한다. 비밀번호·쿠키·키는 저장하지 않는다.
+`chats send`는 기존 1:1 방을 사용하며 없으면 첫 메시지와 함께 새 방을 만든다. `chats create`는 한 명이면 같은 규칙, 두 명 이상이면 새 그룹을 생성한다. `--to`에 본인을 포함하지 않는다. 첫 메시지는 필수이며 빈 방 생성·1:1 중복 생성은 지원하지 않는다. 그룹에만 `--title`을 지정할 수 있다. 생성 명령을 반복하면 새 그룹이 만들어지므로 결과가 불확실할 때 재실행하지 않는다.
 
-정상 결과에는 `sent`, `verified`, `recipient`, `room`, `messageId`, `date`, `text`, `background`가 있다. `verified:true`는 서버의 저장된 메시지와 일치했다는 뜻이다. 상대방 읽음은 확인하지 않는다.
+앱의 `realtimeConect_view.sendMessageChat`를 한 번 호출하고 서버의 방 ID·유형·참여자 전체, 메시지 ID·발신자·원문을 검증한다. 정상 결과에는 `sent`, `verified`, `recipients`, `created`, `room`, `messageId`, `date`, `text`, `background`가 있다. `verified:true`는 서버 저장 기록과 일치했다는 뜻이다. 상대방 읽음은 확인하지 않는다. 비밀번호·쿠키·키는 저장하지 않는다.
 
-오류에 메시지 ID가 있거나 전송 실행 중 연결이 끊겼으면 결과가 불확실할 수 있다. 같은 명령을 자동 재실행하지 말고 `chats read ROOM_ID --json`으로 확인한다. 방 ID를 모르면 사용자 이름으로 대화방 목록을 검색한 후 동일 ID·발신자·본문을 대조한다. 불확실성을 알리고, 조회 범위가 부족하면 페이지를 더 확인한다.
+`notes send`는 일반 텍스트 쪽지를 보낸다. 수신자 여러 명은 쉼표로 구분한다. 제목 미지정 시 첫 줄 앞 100자를 사용한다. 제목 100자·본문 10,000자까지 지원하며 CRLF·NBSP를 정규화한다. 첨부·예약·보안 전송은 미지원이다. 본인에게 보낼 때는 본인 ID만 지정한다. 앱 권한·금칙어·최대 수신자·서버의 실제 수신자 ID 목록을 확인한다. 추가 수신자 확인이 필요한 경우 `--dry-run`의 `requiresConfirmation:true`를 보고, 사용자 지시가 전체 대상·본문을 승인한 범위에서 `--confirm-many`를 사용한다.
+
+쪽지는 쓰기 요청의 자동 재시도를 제거한 뒤 한 번 제출하고, 별도 상세·전체 수신자 조회로 ID·발신자·제목·본문·수신자를 검증한다. 결과에는 `noteId`가 있다. 실제 전송 후 확인 실패는 stderr JSON에 `sent:null`, `verified:false`, `retry:false`와 ID를 남긴다.
+
+오류에 ID가 있거나 전송 실행 중 연결이 끊겼으면 결과가 불확실할 수 있다. 같은 명령을 자동 재실행하지 말고 `chats read ROOM_ID --json` 또는 `notes read NOTE_ID --type S --json`으로 확인한다. 불확실성을 알리고, 조회 범위가 부족하면 페이지를 더 확인한다. `--dry-run`은 전송·새 방 생성을 하지 않으며 `sent:false`다.
+
+0.4.0의 새 방·쪽지 기능은 앱 코드 분석, 모의 전송, 실제 앱의 설정·권한·사전 점검과 검증용 기존 기록 조회를 확인했다. 실제 새 방 생성·쪽지 발송의 전체 과정은 아직 실사용 검증하지 않았다.
 
 ## GUI를 명시적으로 요청받았을 때
 
@@ -84,4 +95,4 @@ node $cbeEntry status --json
 node --test '스킬폴더\scripts\test.mjs'
 ```
 
-동봉 테스트는 메신저 연결·전송을 모의 처리한다. 로컬 CLI 진입점, 대상 선택, 페이지 처리, 보안 쪽지 표시, 수신자 불일치 차단, 한 번 전송 후 서버 ID 검증, 내 조직 우선 검색과 전체 조직 전환 조건을 검사한다. 현재 버전은 17개 테스트를 포함한다.
+동봉 테스트는 메신저 연결·전송을 모의 처리한다. 로컬 CLI 진입점, 대상 선택, 페이지 처리, 보안 쪽지 표시, 내 조직 우선 검색, 새 방·초대 패킷, 수신자 불일치 차단, 한 번 전송 후 서버 기록 검증, 쪽지 HTTP 오류 시 자동 재시도 차단, dry-run과 앱 전송 제한을 검사한다. 현재 버전은 30개 테스트를 포함한다.
