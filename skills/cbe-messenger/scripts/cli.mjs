@@ -100,8 +100,8 @@ export async function run(argv=process.argv.slice(2)) {
   const group=p[0],action=p[1]||'list';
   const downloading=['notes','chats'].includes(group)&&action==='download';
   if(group==='chats'&&downloading)requiredId(v.message);if(v.message!==undefined&&!(group==='chats'&&downloading))throw Error('--message는 chats download에서만 사용하세요.');if(group==='chats'&&v.attachment!==undefined)throw Error('대화 첨부는 --message로 선택하세요.');
-  if(downloading&&!v['out-dir']?.trim())throw new Error('notes download에는 --out-dir 저장폴더가 필요합니다.');
-  if(!downloading&&(v['out-dir']!==undefined||v.attachment!==undefined))throw new Error('--out-dir과 --attachment는 notes download에서만 사용하세요.');
+  if(downloading&&!v['out-dir']?.trim())throw new Error('첨부 다운로드에는 --out-dir 저장폴더가 필요합니다.');
+  if(!downloading&&(v['out-dir']!==undefined||v.attachment!==undefined))throw new Error('--out-dir은 첨부 다운로드에서, --attachment는 notes download에서만 사용하세요.');
   if(v.attachment!==undefined&&!/^[a-f0-9]{24}$/i.test(v.attachment))throw new Error('--attachment에는 notes read에서 확인한 files[].id를 입력하세요.');
   if(v.reserved&&!((group==='notes'&&['read','download'].includes(action))||(group==='open'&&action==='note')))throw new Error('--reserved는 notes read, notes download 또는 open note에서만 사용하세요. 예약 전송은 지원하지 않습니다.');
   const idCommands=(group==='open'&&action!=='main')||(['notes','chats'].includes(group)&&action==='read')||downloading||(group==='users'&&action==='show');
