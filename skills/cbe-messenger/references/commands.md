@@ -106,6 +106,8 @@ cbe notes send --to "사용자ID" --file "C:\자료\회의 안내.pdf" --dry-run
 
 ## GUI를 명시적으로 요청받았을 때
 
+미전송 준비는 `compose --to USER_ID --json` 후 `notes draft 초안.json --json`을 사용한다. 초안 파일의 `to,title,text,files`를 같은 계정·수신자의 작성창 한 개에 적용하고 제목·본문·파일명·바이트 크기를 재조회한다. `staged:true,verified:true,sent:false,uploaded:false`는 로컬 대기열 확인이며 업로드·전송을 뜻하지 않는다. 기존 내용·첨부가 다르면 중단하고, 같은 초안 재호출은 중복하지 않는다. 필요할 때 `expectedTitle`로 확인한 현재 제목 한 개만 지정할 수 있다. 다른 본문·첨부는 지우지 않는다.
+
 ```powershell
 node $cbeEntry open main --json
 node $cbeEntry open note NOTE_ID --type R --json
