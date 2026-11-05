@@ -34,6 +34,14 @@ test('다른 계정·수신자·기존 초안·자동 업로드 작성창에서�
     await assert.rejects(stageNoteComposer(composer,job));
   }
 });
+
+test('첨부 교체는 명시한 이전 로컬 대기열과 제목·본문이 모두 일치해야 한다',async()=>{
+  const previous=[{name:'미서명.hwp',size:20}],files=[{path:'D:/synthetic/서명.hwp',name:'서명.hwp',size:30}],job={account:'own',to:'recipient',title:'같은 제목',text:'같은 본문',files,expectedFiles:previous};
+  let state={account:'own',recipients:['recipient'],title:job.title,text:job.text,autoUpload:false,files:previous,fileCount:1,writePending:false},cancelled=0;
+  const composer={evaluate:async expression=>{if(expression.startsWith('JSON.stringify'))return JSON.stringify(state);if(expression.includes('buttons.click()')){cancelled++;state={...state,files:[],fileCount:0};}return true;},call:async method=>{if(method==='DOM.getDocument')return {root:{nodeId:1}};if(method==='DOM.querySelectorAll')return {nodeIds:[2]};if(method==='DOM.setFileInputFiles'){state={...state,files:[{name:files[0].name,size:files[0].size}],fileCount:1};return {};}throw Error('네트워크 제출 금지');}};
+  await assert.rejects(stageNoteComposer(composer,{...job,expectedFiles:[{name:'다른 파일.hwp',size:20}]}));assert.equal(cancelled,0);
+  const result=await stageNoteComposer(composer,job);assert.equal(result.verified,true);assert.equal(result.sent,false);assert.equal(result.uploaded,false);assert.equal(cancelled,1);assert.deepEqual(state.files,[{name:'서명.hwp',size:30}]);
+});
 test('앱 메인 페이지만 선택하며 중복·다른 호스트는 거절',()=>{
   assert.equal(selectTarget([{...target,url:'about:blank'},target]),target);
   assert.throws(()=>selectTarget([target,target]));

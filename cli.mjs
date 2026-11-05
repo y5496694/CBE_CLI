@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { realpathSync, readFileSync } from 'node:fs';
 import { Messenger } from './messenger.mjs';
 
-const HELP=`충북소통메신저 CLI 0.8.0 — 로그인된 앱에 연결
+const HELP=`충북소통메신저 CLI 0.8.1 — 로그인된 앱에 연결
 
 사용법:
   cbe status
